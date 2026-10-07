@@ -1,0 +1,2 @@
+[Lisez calmement. Regardez devant vous.]
+Bienvenue dans ce court exemple. Ce téléprompteur suit ma voix. Je peux lire lentement, faire une pause et continuer à mon rythme. Le texte reste dans une colonne étroite près de la caméra. Merci de votre attention !

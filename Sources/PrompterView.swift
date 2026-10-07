@@ -72,6 +72,7 @@ struct PrompterView: NSViewRepresentable {
         var timer: Timer?
         var script = PromptScript("")
         private var lastText = ""
+        private var lastLocale = ""
         private var lastCursor = Int.min
         private var lastFont = 0.0
         private var lastColumnWidth = 0.0
@@ -93,13 +94,14 @@ struct PrompterView: NSViewRepresentable {
             self.fontSize = fontSize
             self.columnWidth = columnWidth
             let size = scroll.contentSize
-            let structureChanged = lastText != script.text || lastFont != fontSize ||
+            let structureChanged = lastText != script.text || lastLocale != script.locale.identifier || lastFont != fontSize ||
                 lastColumnWidth != columnWidth || lastSize != size
             if structureChanged {
                 let paragraph = NSMutableParagraphStyle()
                 paragraph.lineSpacing = fontSize * 0.22
                 paragraph.paragraphSpacing = fontSize * 0.05
                 paragraph.alignment = .center
+                paragraph.baseWritingDirection = script.locale.language.characterDirection == .rightToLeft ? .rightToLeft : .leftToRight
                 text.textStorage?.setAttributedString(NSAttributedString(string: script.text, attributes: [
                     .font: NSFont.systemFont(ofSize: fontSize, weight: .semibold),
                     .foregroundColor: NSColor(white: 0.60, alpha: 1),
@@ -114,7 +116,7 @@ struct PrompterView: NSViewRepresentable {
                 text.textContainerInset = NSSize(width: horizontal, height: max(100, size.height * 0.38))
                 text.frame.size.width = size.width
                 text.words = script.words
-                lastText = script.text; lastFont = fontSize; lastSize = size
+                lastText = script.text; lastLocale = script.locale.identifier; lastFont = fontSize; lastSize = size
                 lastColumnWidth = columnWidth
             }
             if structureChanged || cursor != lastCursor {

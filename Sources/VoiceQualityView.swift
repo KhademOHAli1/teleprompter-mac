@@ -17,11 +17,11 @@ struct VoiceQualityView: View {
     var body: some View {
         VStack(spacing: 5) {
             HStack {
-                Text("LEISE")
+                Text(L10n.text("QUIET"))
                 Spacer()
-                Text("ZIELBEREICH")
+                Text(L10n.text("TARGET"))
                 Spacer()
-                Text("LAUT")
+                Text(L10n.text("LOUD"))
             }
             .font(.system(size: 8, weight: .medium)).tracking(0.7)
             .foregroundStyle(.white.opacity(0.4))
@@ -55,8 +55,8 @@ struct VoiceQualityView: View {
         }
         .frame(width: 250)
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel("Stimm-Check")
+        .accessibilityLabel(L10n.text("Voice check"))
         .accessibilityValue(reading.state.label)
-        .help("Der Zeiger zeigt den Mikrofonpegel: links leise, Mitte Zielbereich, rechts laut. Grün im Hinweis bedeutet zusätzlich eine aktuelle Übereinstimmung mit deinem Text. Pegelgrenzen sind Näherungswerte. Kein objektiver Aussprachetest; Akzent, Störgeräusche und Erkennungsverzögerung können den Hinweis beeinflussen.")
+        .help(L10n.text("The pointer shows microphone level. Green feedback also requires a recent script match. This is not a pronunciation assessment."))
     }
 }

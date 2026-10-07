@@ -10,6 +10,7 @@ ROOT_FILES = (
 )
 TREES = {
     "Sources": {".swift"},
+    "Resources": {".strings", ".txt"},
     "Tests": {".swift", ".py"},
     "scripts": {".py", ".sh"},
     "docs": {".md"},

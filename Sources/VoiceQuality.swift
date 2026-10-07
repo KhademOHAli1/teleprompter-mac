@@ -38,15 +38,15 @@ enum VoiceQualityState: Equatable, Sendable {
 
     var label: String {
         switch self {
-        case .inactive: return "Stimm-Check · Mikrofon aus"
-        case .waiting: return "Warte auf deine Stimme"
-        case .pause: return "Sprechpause"
-        case .quiet: return "Zu leise · näher ans Mikrofon"
-        case .pending: return "Pegel gut · warte auf Erkennung"
-        case .good: return "Gut hörbar · Text erkannt"
-        case .unclear: return "Textzuordnung unsicher"
-        case .loud: return "Zu laut · etwas leiser"
-        case .clipping: return "Pegelspitzen · leiser sprechen"
+        case .inactive: return L10n.text("Voice check · microphone off")
+        case .waiting: return L10n.text("Waiting for your voice")
+        case .pause: return L10n.text("Speaking pause")
+        case .quiet: return L10n.text("Too quiet · move closer")
+        case .pending: return L10n.text("Level good · waiting for recognition")
+        case .good: return L10n.text("Good level · text matched")
+        case .unclear: return L10n.text("Script match uncertain")
+        case .loud: return L10n.text("Too loud · speak softer")
+        case .clipping: return L10n.text("Clipping · speak softer")
         }
     }
 }

@@ -2,7 +2,7 @@
 
 ## Local mode
 
-**Mac · lokal** uses Apple's on-device German SpeechTranscriber. This app does not send the script or microphone audio to OpenAI in local mode. macOS may download German speech assets when they are not installed.
+**Mac · lokal** uses Apple's on-device SpeechTranscriber in the selected speech locale. This app does not send the script or microphone audio to OpenAI in local mode. macOS may download the selected language's speech assets when they are not installed.
 
 The application does not write microphone recordings to disk. Audio buffers, transcripts and recognition context are held in memory during a session. The operating system can have its own device, model-download and diagnostic behavior.
 

@@ -1,12 +1,12 @@
 # Teleprompter for Mac
 
-A native German teleprompter that follows your voice. Paste a script, start the microphone, and read at your own pace. Speech pauses hold the reading position.
+A native multilingual teleprompter that follows your voice. Paste a script, start the microphone, and read at your own pace. Speech pauses hold the reading position.
 
 [Deutsch](README.de.md) · [Privacy](docs/PRIVACY.md) · [Contributing](CONTRIBUTING.md) · [MIT license](LICENSE)
 
 ## Features
 
-- On-device German speech recognition using Apple's SpeechAnalyzer.
+- On-device speech recognition using Apple's SpeechAnalyzer and the selected speech locale.
 - Optional OpenAI live transcription with your own API key.
 - Word tracking with partial-result revisions, repeated phrases, fillers, German compounds and spoken numbers.
 - Centered text with adjustable width, font size and word lead.
@@ -16,12 +16,24 @@ A native German teleprompter that follows your voice. Paste a script, start the 
 - Local microphone level meter with a centered green target zone and recent script-match feedback.
 - A locally saved script draft and optional Keychain storage for the API key.
 
+## Languages
+
+The interface follows the macOS app language or the MCP host/browser locale.
+English, German, French and Spanish translations are included; other interface
+languages fall back to English. The **Speech language** setting is independent
+of the interface language and defaults to the system/host language.
+
+The script is never translated. Select its language before starting to read.
+Available recognition languages depend on the selected provider. Chinese and
+Japanese use word segmentation; right-to-left scripts keep their text direction.
+See [localization](docs/LOCALIZATION.md) for supported behavior and contribution instructions.
+
 ## Requirements
 
 - Apple Silicon Mac, macOS 26 or newer.
 - Xcode 26 or newer, selected as the active developer toolchain.
 - A microphone and microphone permission to read aloud.
-- German speech assets, downloaded by macOS when needed.
+- Speech assets for the selected language, downloaded by macOS when needed.
 
 There are no third-party package dependencies. Build and test scripts use Xcode's Swift compiler and Apple frameworks. They currently compile in Swift 5 language mode. Intel Macs and older macOS releases are outside the supported build target.
 
@@ -77,7 +89,7 @@ This is an approximate reception hint. It does not grade pronunciation or accent
 
 Choose **OpenAI · online → OpenAI einrichten** and enter your own API key. Audio and script-derived vocabulary hints are transmitted to OpenAI while reading. API billing and account model access are required; a ChatGPT subscription is not an API key.
 
-The integration uses **gpt-live-transcribe**, German language hints, 24 kHz PCM16 mono audio and configurable delay. Configuration follows the [official OpenAI Realtime transcription documentation](https://developers.openai.com/api/docs/guides/realtime-transcription), reviewed on 2026-10-07. The implementation commits audio every ten seconds; it does not implement client-side VAD.
+The integration uses **gpt-live-transcribe**, selected-language hints, 24 kHz PCM16 mono audio and configurable delay. Configuration follows the [official OpenAI Realtime transcription documentation](https://developers.openai.com/api/docs/guides/realtime-transcription), reviewed on 2026-10-07. The implementation commits audio every ten seconds; it does not implement client-side VAD.
 
 The key remains in memory unless you explicitly save it to macOS Keychain. Clear the field and click the save button to remove a saved key. No key is included in this repository, and tests do not require one.
 
@@ -90,7 +102,7 @@ The key remains in memory unless you explicitly save it to macOS Keychain. Clear
 
 Python 3.9+ is needed only for the source hygiene and packaging tools. ShellCheck is optional for local shell linting.
 
-The Swift test runner performs **71 deterministic checks**: 33 for script alignment, 27 for voice-meter states and measurements, and 11 for the OpenAI session configuration. Six additional Python tests cover source packaging and hygiene:
+The Swift test runner performs **91 deterministic checks**: 20 for localization and multilingual alignment, 33 for script alignment, 27 for voice-meter states and measurements, and 11 for the OpenAI session configuration. Eight additional Python tests cover source packaging and hygiene:
 
     python3 -m unittest discover -s Tests -p '*Tests.py'
 
@@ -115,7 +127,7 @@ The file diagnostic prints transcripts to the terminal. Use non-sensitive record
 | Sources/PrompterModel.swift | App state, cancellation, seek and resume |
 | Sources/PrompterView.swift | Native text rendering and eased scrolling |
 | Sources/VoiceQuality*.swift | Audio measurements, reception hints and meter |
-| Sources/App.swift | German interface and shortcuts |
+| Sources/App.swift | Localized interface and shortcuts |
 | Sources/Launcher.swift | App entry point and CLI diagnostics |
 | Tests/ | Offline regression checks |
 | scripts/ | Build, tests and source packaging |

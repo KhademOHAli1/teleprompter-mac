@@ -8,8 +8,9 @@ import Foundation
         if !condition() { print("FAIL: \(name)"); exit(1) }
         print("PASS: \(name)")
     }
+    static func germanScript(_ text: String) -> PromptScript { PromptScript(text, locale: Locale(identifier: "de-DE")) }
     static func main() throws {
-        let script = PromptScript("[PAUSE] Willkommen Willkommen im Testprogramm.")
+        let script = germanScript("[PAUSE] Willkommen Willkommen im Testprogramm.")
         let event = RealtimeConfiguration.session(script: script, delay: "low")
         let session = event["session"] as! [String: Any]
         let audio = session["audio"] as! [String: Any]
@@ -29,7 +30,7 @@ import Foundation
         expect(keywords == ["Testprogramm", "Willkommen"], "Keywords are unique, sorted and exclude cues")
         expect(event["key"] == nil && session["api_key"] == nil, "Configuration contains no credential")
         expect((try? JSONSerialization.data(withJSONObject: event)) != nil, "Configuration serializes as JSON")
-        let many = PromptScript((0..<100).map { "Begriff\($0)" }.joined(separator: " "))
+        let many = germanScript((0..<100).map { "Begriff\($0)" }.joined(separator: " "))
         let manySession = RealtimeConfiguration.session(script: many, delay: "unsupported")["session"] as! [String: Any]
         let manyAudio = manySession["audio"] as! [String: Any]
         let manyInput = manyAudio["input"] as! [String: Any]

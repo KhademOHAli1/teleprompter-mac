@@ -1,15 +1,37 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<plist version="1.0"><dict>
-  <key>CFBundleName</key><string>Teleprompter</string>
-  <key>CFBundleDisplayName</key><string>Teleprompter</string>
-  <key>CFBundleIdentifier</key><string>de.local.teleprompter</string>
-  <key>CFBundleExecutable</key><string>Teleprompter</string>
-  <key>CFBundlePackageType</key><string>APPL</string>
-  <key>CFBundleShortVersionString</key><string>1.3.0</string>
-  <key>CFBundleVersion</key><string>4</string>
-  <key>LSMinimumSystemVersion</key><string>26.0</string>
-  <key>NSMicrophoneUsageDescription</key><string>Teleprompter nutzt dein Mikrofon, um den Text beim Vorlesen mit deiner Stimme zu synchronisieren.</string>
-  <key>NSSpeechRecognitionUsageDescription</key><string>Teleprompter erkennt deutsche Wörter, um deine Leseposition im Text zu verfolgen.</string>
-  <key>NSHighResolutionCapable</key><true/>
-</dict></plist>
+<plist version="1.0">
+<dict>
+	<key>CFBundleName</key>
+	<string>Teleprompter</string>
+	<key>CFBundleDisplayName</key>
+	<string>Teleprompter</string>
+	<key>CFBundleIdentifier</key>
+	<string>de.local.teleprompter</string>
+	<key>CFBundleExecutable</key>
+	<string>Teleprompter</string>
+	<key>CFBundlePackageType</key>
+	<string>APPL</string>
+	<key>CFBundleShortVersionString</key>
+	<string>1.4.0</string>
+	<key>CFBundleVersion</key>
+	<string>5</string>
+	<key>LSMinimumSystemVersion</key>
+	<string>26.0</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Teleprompter uses the microphone to synchronize the text with your voice while reading.</string>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>Teleprompter recognizes speech in the selected language to follow your position in the script.</string>
+	<key>NSHighResolutionCapable</key>
+	<true/>
+	<key>CFBundleDevelopmentRegion</key>
+	<string>en</string>
+	<key>CFBundleLocalizations</key>
+	<array>
+		<string>en</string>
+		<string>de</string>
+		<string>fr</string>
+		<string>es</string>
+	</array>
+</dict>
+</plist>

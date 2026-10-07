@@ -1,0 +1,3 @@
+/* SPDX-License-Identifier: MIT */
+"NSMicrophoneUsageDescription" = "Teleprompter uses the microphone to synchronize the text with your voice while reading.";
+"NSSpeechRecognitionUsageDescription" = "Teleprompter recognizes speech in the selected language to follow your position in the script.";

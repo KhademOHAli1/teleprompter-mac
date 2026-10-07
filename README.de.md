@@ -26,7 +26,7 @@ Alternativ **start.command** doppelklicken. Das Skript baut die App bei Bedarf u
 
 1. Deinen Text einfügen oder den [neutralen Beispieltext](examples/demo-de.txt) verwenden.
 2. **Mac · lokal** wählen und **Vorlesen starten** anklicken.
-3. Mikrofonzugriff erlauben und natürlich auf Deutsch vorlesen.
+3. Mikrofonzugriff erlauben und in der ausgewählten Skriptsprache vorlesen.
 
 Textbreite, Schriftgröße und Wortvorlauf lassen sich einstellen. Die schmale Textspalte ist mittig angeordnet. Regiehinweise wie **[PAUSE]** erscheinen kleiner und werden beim Wortabgleich übersprungen.
 
@@ -53,6 +53,15 @@ Im lokalen Modus sendet die App Audio und Skript nicht an OpenAI. Das deutsche M
     python3 scripts/check-source.py
     python3 scripts/archive-source.py
 
-Python 3.9+ wird nur für Paketprüfung und Quellcode-ZIP benötigt. Es gibt **71 Swift-Prüfungen und sechs Python-Tests für die Paketprüfung**. Build und Tests sind lokal überprüfbar; der vorbereitete GitHub-Workflow benötigt keine Schlüssel und keinen Mikrofonzugriff.
+Python 3.9+ wird nur für Paketprüfung und Quellcode-ZIP benötigt. Es gibt **91 Swift-Prüfungen und acht Python-Tests für die Paketprüfung**. Build und Tests sind lokal überprüfbar; der vorbereitete GitHub-Workflow benötigt keine Schlüssel und keinen Mikrofonzugriff.
 
 Details: [Architektur](docs/ARCHITECTURE.md), [Prüfnachweise](docs/VALIDATION.md), [Mitwirken](CONTRIBUTING.md) und [Veröffentlichung](docs/RELEASING.md).
+
+## Sprachen
+
+Die Oberfläche folgt der App-Sprache in macOS beziehungsweise der Sprache des
+MCP-Hosts oder Browsers. Englisch, Deutsch, Französisch und Spanisch sind
+enthalten; für andere Oberflächensprachen wird Englisch verwendet. Die
+Skriptsprache lässt sich unabhängig davon auswählen. Der Text wird nicht
+übersetzt. Die verfügbaren Erkennungssprachen hängen vom Anbieter ab.
+Weitere Informationen: [Lokalisierung](docs/LOCALIZATION.md).

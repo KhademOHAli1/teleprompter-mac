@@ -1,0 +1,2 @@
+[Langsam lesen. Nach vorn schauen.]
+Willkommen zu diesem kurzen Beispiel. Dieser Teleprompter folgt meiner Stimme. Ich kann langsam lesen, eine Pause machen und danach in meinem Tempo weiterreden. Der Text bleibt in einer schmalen Spalte nahe der Kamera. Vielen Dank fürs Zuhören!

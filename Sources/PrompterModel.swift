@@ -2,6 +2,7 @@
 import SwiftUI
 import AppKit
 import AVFoundation
+import Speech
 
 @MainActor
 final class PrompterModel: ObservableObject {
@@ -12,7 +13,7 @@ final class PrompterModel: ObservableObject {
     @Published var listening = false
     @Published var preparing = false
     @Published var stopping = false
-    @Published var status = "Text einfügen und starten"
+    @Published var status = L10n.text("Paste text and start")
     @Published var failure: String?
     @Published var transcript = ""
     @Published var voiceQuality = VoiceQualityReading.inactive
@@ -22,6 +23,8 @@ final class PrompterModel: ObservableObject {
     @Published var mirrored = UserDefaults.standard.bool(forKey: "mirrored")
     @Published var floating = UserDefaults.standard.bool(forKey: "floating")
     @Published var provider = UserDefaults.standard.string(forKey: "provider") ?? "local"
+    @Published var speechLanguage = UserDefaults.standard.string(forKey: "speechLanguage") ?? "system"
+    @Published var localSpeechLanguages: [String] = []
     @Published var delay = UserDefaults.standard.string(forKey: "delay") ?? "minimal"
     @Published var showSettings = false
     @Published var showOpenAI = false
@@ -39,6 +42,27 @@ final class PrompterModel: ObservableObject {
     private var lastMeterUpdate = Date.distantPast
     private var voiceMonitor = VoiceQualityMonitor()
 
+    var speechLocale: Locale { SpeechLanguage.locale(speechLanguage) }
+    var speechLanguages: [String] {
+        let available = provider == "local" ? localSpeechLanguages : SpeechLanguage.common
+        return Array(Set(available + [speechLocale.identifier.replacingOccurrences(of: "_", with: "-")])).sorted {
+            SpeechLanguage.name($0).localizedCaseInsensitiveCompare(SpeechLanguage.name($1)) == .orderedAscending
+        }
+    }
+    var microphonePermissionDenied: Bool {
+        [.denied, .restricted].contains(AVCaptureDevice.authorizationStatus(for: .audio))
+    }
+    func refreshSpeechLanguages() {
+        Task { @MainActor [weak self] in
+            let locales = await SpeechTranscriber.supportedLocales
+            self?.localSpeechLanguages = locales.map { $0.identifier.replacingOccurrences(of: "_", with: "-") }
+        }
+    }
+    func changeSpeechLanguage() {
+        UserDefaults.standard.set(speechLanguage, forKey: "speechLanguage")
+        prepareScript()
+    }
+
     var nextWord: Int { max(0, min(cursor + 1, max(0, script.words.count - 1))) }
     var sentence: Int { script.sentence(at: nextWord) }
     var progress: Double { script.words.isEmpty ? 0 : Double(cursor + 1) / Double(script.words.count) }
@@ -53,7 +77,7 @@ final class PrompterModel: ObservableObject {
 
     func prepareScript() {
         saveDraft()
-        let next = PromptScript(draft)
+        let next = PromptScript(draft, locale: speechLocale)
         if next != script {
             script = next
             tracker = WordTracker(script: next)
@@ -64,7 +88,7 @@ final class PrompterModel: ObservableObject {
 
     func readPreview() {
         prepareScript()
-        guard !script.words.isEmpty else { status = "Füge zuerst deinen Text ein."; return }
+        guard !script.words.isEmpty else { status = L10n.text("Paste your text first."); return }
         editing = false
     }
 
@@ -75,12 +99,12 @@ final class PrompterModel: ObservableObject {
     func start() {
         guard !preparing, !listening, !stopping else { return }
         prepareScript()
-        guard !script.words.isEmpty else { failure = "Füge zuerst einen Text ein."; return }
+        guard !script.words.isEmpty else { failure = L10n.text("Paste a text first."); return }
         if finished { tracker.seek(nextWord: 0); cursor = -1 }
         // A fresh ASR stream needs fresh anchors, preserving the chosen position.
         tracker.seek(nextWord: cursor + 1)
         editing = false; preparing = true; failure = nil
-        transcript = ""; status = "Mikrofon wird vorbereitet …"
+        transcript = ""; status = L10n.text("Preparing microphone …")
         voiceMonitor.start()
         voiceQuality = voiceMonitor.reading(at: Date.timeIntervalSinceReferenceDate)
         lastMeterUpdate = .distantPast
@@ -90,7 +114,7 @@ final class PrompterModel: ObservableObject {
                 let permission = await AVCaptureDevice.requestAccess(for: .audio)
                 try Task.checkCancellation()
                 guard permission else {
-                    throw PrompterError.message("Mikrofonzugriff fehlt. Erlaube Teleprompter unter Systemeinstellungen → Datenschutz & Sicherheit → Mikrofon.")
+                    throw PrompterError.message(L10n.text("Microphone access is missing. Allow Teleprompter in System Settings → Privacy & Security → Microphone."))
                 }
                 let onText: @MainActor (String, String) -> Void = { [weak self] text, utterance in
                     guard let self, self.generation == id else { return }
@@ -104,7 +128,7 @@ final class PrompterModel: ObservableObject {
                         self.lastMatch = Date()
                         if self.finished {
                             self.stop()
-                            self.status = "Text vollständig gelesen"
+                            self.status = L10n.text("Script completed")
                         }
                     }
                 }
@@ -152,10 +176,10 @@ final class PrompterModel: ObservableObject {
     private func updateActivity() {
         guard listening else { return }
         voiceQuality = voiceMonitor.reading(at: Date.timeIntervalSinceReferenceDate)
-        if Date().timeIntervalSince(lastSound) > 0.85 { status = "Sprechpause · Position bleibt stehen" }
+        if Date().timeIntervalSince(lastSound) > 0.85 { status = L10n.text("Speaking pause · position held") }
         else if Date().timeIntervalSince(lastMatch) > 3 && !transcript.isEmpty {
-            status = "Suche Textstelle · bei Bedarf ein Wort anklicken"
-        } else { status = "Folgt deiner Stimme · \(provider == "local" ? "lokal" : "OpenAI")" }
+            status = L10n.text("Finding your place · click a word if needed")
+        } else { status = L10n.text("Following your voice · {0}", provider == "local" ? L10n.text("local") : "OpenAI") }
     }
 
     func stop(restart: Bool = false) {
@@ -164,7 +188,7 @@ final class PrompterModel: ObservableObject {
         activityTimer?.invalidate(); activityTimer = nil
         listening = false; preparing = false; stopping = true
         voiceMonitor.stop(); voiceQuality = .inactive
-        status = failure == nil ? "Pausiert · bereit zum Fortsetzen" : "Erkennung angehalten"
+        status = failure == nil ? L10n.text("Paused · ready to resume") : L10n.text("Recognition stopped")
         let localSession = local; local = nil
         let cloudSession = cloud; cloud = nil
         cloudSession?.stop()
@@ -181,7 +205,7 @@ final class PrompterModel: ObservableObject {
         tracker.seek(nextWord: word); cursor = tracker.cursor
         transcript = ""
         if listening || preparing { stop(restart: resume) }
-        else { status = "Leseposition gesetzt" }
+        else { status = L10n.text("Reading position set") }
     }
 
     func moveSentence(_ direction: Int) {
@@ -202,22 +226,12 @@ final class PrompterModel: ObservableObject {
     }
 
     func saveKey() {
-        do { try APIKeyStore.save(apiKey); keyNotice = apiKey.isEmpty ? "Schlüssel entfernt." : "Im macOS-Schlüsselbund gespeichert." }
+        do { try APIKeyStore.save(apiKey); keyNotice = apiKey.isEmpty ? L10n.text("Key removed.") : L10n.text("Saved in macOS Keychain.") }
         catch { keyNotice = error.localizedDescription }
     }
 
     func loadExample() {
-        draft = """
-        Guten Tag und herzlich willkommen.
-
-        Dieser Teleprompter folgt meiner Stimme. Wenn ich schneller spreche, geht der Text schneller weiter. Wenn ich eine Pause mache, bleibt er stehen.
-
-        Ich kann auch ein Wort wiederholen oder einen kurzen Gedanken ergänzen. Danach finde ich zurück zu meinem Text.
-
-        Jetzt spreche ich ganz bewusst etwas langsamer. Jedes Wort soll gut zu lesen sein.
-
-        Vielen Dank fürs Zuhören.
-        """
+        draft = SpeechLanguage.demo(speechLocale)
         prepareScript()
     }
 }

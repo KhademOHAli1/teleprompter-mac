@@ -16,9 +16,9 @@ enum RealtimeConfiguration {
             "type": "transcription", "audio": ["input": [
                 "format": ["type": "audio/pcm", "rate": sampleRate],
                 "transcription": [
-                    "model": model, "languages": ["de"],
+                    "model": model, "languages": [SpeechLanguage.apiCode(script.locale)],
                     "delay": supportedDelays.contains(delay) ? delay : "minimal",
-                    "prompt": "Eine Person liest einen deutschen Teleprompter-Text vor.",
+                    "prompt": "A person is reading a teleprompter script in its original language. Transcribe without translating.",
                     "keywords": keywords
                 ],
                 "turn_detection": NSNull()

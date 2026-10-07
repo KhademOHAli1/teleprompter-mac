@@ -25,13 +25,13 @@ final class AudioCapture {
         let source = input.outputFormat(forBus: 0)
         guard source.sampleRate > 0, source.channelCount > 0,
               let converter = AVAudioConverter(from: source, to: format) else {
-            throw PrompterError.message("Kein verfügbares Mikrofon. Prüfe die Toneingabe in den Systemeinstellungen.")
+            throw PrompterError.message(L10n.text("No microphone available. Check sound input in System Settings."))
         }
         converter.primeMethod = .none
         running = true
         configurationObserver = NotificationCenter.default.addObserver(
             forName: .AVAudioEngineConfigurationChange, object: engine, queue: .main
-        ) { _ in onFailure("Das Mikrofon wurde gewechselt. Bitte starte die Erkennung erneut.") }
+        ) { _ in onFailure(L10n.text("The microphone changed. Restart recognition.")) }
         input.installTap(onBus: 0, bufferSize: bufferSize, format: source) { [weak self] buffer, _ in
             guard let self, let copy = AVAudioPCMBuffer(pcmFormat: source, frameCapacity: buffer.frameLength) else { return }
             copy.frameLength = buffer.frameLength
@@ -55,7 +55,7 @@ final class AudioCapture {
                     return copy
                 }
                 if status == .error {
-                    onFailure(error?.localizedDescription ?? "Das Mikrofon-Audio konnte nicht verarbeitet werden.")
+                    onFailure(error?.localizedDescription ?? L10n.text("Microphone audio could not be processed."))
                     return
                 }
                 guard output.frameLength > 0 else { return }
@@ -91,10 +91,10 @@ final class LocalSpeechSession {
     private var resultTask: Task<Void, Never>?
     private var progressTask: Task<Void, Never>?
 
-    static func makeTranscriber() async throws -> SpeechTranscriber {
+    static func makeTranscriber(locale requestedLocale: Locale = SpeechLanguage.locale("system")) async throws -> SpeechTranscriber {
         guard SpeechTranscriber.isAvailable,
-              let locale = await SpeechTranscriber.supportedLocale(equivalentTo: Locale(identifier: "de-DE")) else {
-            throw PrompterError.message("Die lokale deutsche Spracherkennung ist auf diesem Mac nicht verfügbar.")
+              let locale = await SpeechTranscriber.supportedLocale(equivalentTo: requestedLocale) else {
+            throw PrompterError.message(L10n.text("Local recognition is unavailable for {0}. Choose another speech language or OpenAI.", SpeechLanguage.name(requestedLocale.identifier)))
         }
         return SpeechTranscriber(locale: locale, transcriptionOptions: [],
                                  reportingOptions: [.volatileResults, .fastResults], attributeOptions: [])
@@ -103,11 +103,11 @@ final class LocalSpeechSession {
     static func ensureAssets(_ transcriber: SpeechTranscriber,
                              status: @escaping @MainActor (String) -> Void) async throws {
         if let installation = try await AssetInventory.assetInstallationRequest(supporting: [transcriber]) {
-            status("Deutsches Sprachmodell wird geladen …")
+            status(L10n.text("Downloading speech model …"))
             let progressTask = Task { @MainActor in
                 while !Task.isCancelled {
                     let percent = Int(installation.progress.fractionCompleted * 100)
-                    status("Deutsches Sprachmodell wird geladen · \(percent) %")
+                    status(L10n.text("Downloading speech model · {0}%", L10n.number(percent)))
                     try? await Task.sleep(for: .milliseconds(350))
                 }
             }
@@ -121,11 +121,11 @@ final class LocalSpeechSession {
                onStatus: @escaping @MainActor (String) -> Void,
                onLevel: @escaping @MainActor (AudioMetrics) -> Void,
                onFailure: @escaping @MainActor (String) -> Void) async throws {
-        let transcriber = try await Self.makeTranscriber()
+        let transcriber = try await Self.makeTranscriber(locale: script.locale)
         try await Self.ensureAssets(transcriber, status: onStatus)
-        onStatus("Lokale Spracherkennung wird vorbereitet …")
+        onStatus(L10n.text("Preparing local recognition …"))
         guard let format = await SpeechAnalyzer.bestAvailableAudioFormat(compatibleWith: [transcriber]) else {
-            throw PrompterError.message("Kein kompatibles Audioformat für das deutsche Sprachmodell.")
+            throw PrompterError.message(L10n.text("No compatible audio format for the speech model."))
         }
         let analyzer = SpeechAnalyzer(modules: [transcriber],
                                       options: .init(priority: .userInitiated, modelRetention: .processLifetime))
@@ -159,11 +159,11 @@ final class LocalSpeechSession {
         self.capture = capture
         try capture.start(format: format, onBuffer: { buffer, metrics in
             if case .dropped = continuation.yield(AnalyzerInput(buffer: buffer)) {
-                Task { @MainActor in onFailure("Die lokale Erkennung kommt nicht hinterher. Bitte starte sie erneut.") }
+                Task { @MainActor in onFailure(L10n.text("Local recognition cannot keep up. Restart it.")) }
             }
             Task { @MainActor in onLevel(metrics) }
         }, onFailure: { message in Task { @MainActor in onFailure(message) } })
-        onStatus("Hört zu · Deutsch · lokal")
+        onStatus(L10n.text("Listening · {0} · {1}", SpeechLanguage.name(script.locale.identifier), L10n.text("local")))
     }
 
     func stop() async {
@@ -195,7 +195,7 @@ enum APIKeyStore {
         if trimmed.isEmpty {
             let status = SecItemDelete(query as CFDictionary)
             guard status == errSecSuccess || status == errSecItemNotFound else {
-                throw PrompterError.message("Der Schlüssel konnte nicht entfernt werden (\(status)).")
+                throw PrompterError.message(L10n.text("Could not remove the key ({0}).", String(status)))
             }
             return
         }
@@ -205,7 +205,7 @@ enum APIKeyStore {
             status = SecItemAdd(query.merging(attributes, uniquingKeysWith: { _, new in new }) as CFDictionary, nil)
         }
         guard status == errSecSuccess else {
-            throw PrompterError.message("Der Schlüssel konnte nicht im macOS-Schlüsselbund gespeichert werden (\(status)).")
+            throw PrompterError.message(L10n.text("Could not save the key in macOS Keychain ({0}).", String(status)))
         }
     }
 }
@@ -233,9 +233,9 @@ final class OpenAISpeechSession {
                onLevel: @escaping @MainActor (AudioMetrics) -> Void,
                onFailure: @escaping @MainActor (String) -> Void) async throws {
         guard !key.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
-            throw PrompterError.message("Trage unter „OpenAI“ deinen API-Schlüssel ein oder wähle die lokale Erkennung.")
+            throw PrompterError.message(L10n.text("Enter an OpenAI API key or select local recognition."))
         }
-        onStatus("Verbindet mit OpenAI …")
+        onStatus(L10n.text("Connecting to OpenAI …"))
         var request = URLRequest(url: URL(string: "wss://api.openai.com/v1/realtime?intent=transcription")!)
         request.setValue("Bearer \(key.trimmingCharacters(in: .whitespacesAndNewlines))", forHTTPHeaderField: "Authorization")
         let socket = URLSession.shared.webSocketTask(with: request)
@@ -286,7 +286,7 @@ final class OpenAISpeechSession {
             if let errorMessage { throw PrompterError.message(errorMessage) }
             try await Task.sleep(for: .milliseconds(100))
         }
-        guard ready else { throw PrompterError.message("OpenAI antwortet nicht. Prüfe Schlüssel, Modellzugriff und Internetverbindung.") }
+        guard ready else { throw PrompterError.message(L10n.text("OpenAI is not responding. Check the key, model access and internet connection.")) }
         let (stream, continuation) = AsyncStream<Data>.makeStream(bufferingPolicy: .bufferingOldest(80))
         self.continuation = continuation
         senderTask = Task { @MainActor in
@@ -304,7 +304,7 @@ final class OpenAISpeechSession {
                     }
                 }
             } catch {
-                if !Task.isCancelled { onFailure("OpenAI-Audio konnte nicht gesendet werden: \(error.localizedDescription)") }
+                if !Task.isCancelled { onFailure(L10n.text("Could not send OpenAI audio: {0}", error.localizedDescription)) }
             }
         }
         let capture = AudioCapture()
@@ -316,11 +316,11 @@ final class OpenAISpeechSession {
             guard let pointer = audio.mData else { return }
             let data = Data(bytes: pointer, count: Int(audio.mDataByteSize))
             if case .dropped = continuation.yield(data) {
-                Task { @MainActor in onFailure("Die Internetverbindung ist zu langsam. Starte neu oder wähle die lokale Erkennung.") }
+                Task { @MainActor in onFailure(L10n.text("The connection is too slow. Restart or choose local recognition.")) }
             }
             Task { @MainActor in onLevel(metrics) }
         }, onFailure: { message in Task { @MainActor in onFailure(message) } })
-        onStatus("Hört zu · Deutsch · OpenAI")
+        onStatus(L10n.text("Listening · {0} · {1}", SpeechLanguage.name(script.locale.identifier), "OpenAI"))
     }
 
     private func send(_ value: [String: Any], socket: URLSessionWebSocketTask) async throws {

@@ -11,13 +11,17 @@ struct ScriptWord: Equatable {
 
 struct PromptScript: Equatable {
     let text: String
+    let locale: Locale
     let words: [ScriptWord]
     let sentenceStarts: [Int]
     let stageDirections: [NSRange]
 
-    init(_ source: String) {
+    init(_ source: String, locale: Locale = .current) {
+        self.locale = locale
+        let language = NLLanguage(rawValue: locale.language.languageCode?.identifier ?? "en")
         let tokenizer = NLTokenizer(unit: .sentence)
         tokenizer.string = source
+        tokenizer.setLanguage(language)
         var sentences: [String] = []
         tokenizer.enumerateTokens(in: source.startIndex..<source.endIndex) { range, _ in
             let sentence = source[range].trimmingCharacters(in: .whitespacesAndNewlines)
@@ -32,11 +36,11 @@ struct PromptScript: Equatable {
         for (sentenceID, sentence) in sentences.enumerated() {
             if !rendered.isEmpty { rendered += "\n\n" }
             let offset = (rendered as NSString).length
-            for match in WordNormalizer.matches(sentence) {
-                let word = (sentence as NSString).substring(with: match.range)
-                tokens.append(ScriptWord(text: word, normalized: WordNormalizer.normalize(word),
-                                         range: NSRange(location: offset + match.range.location,
-                                                        length: match.range.length), sentence: sentenceID))
+            for match in WordNormalizer.matches(sentence, locale: locale) {
+                let word = (sentence as NSString).substring(with: match)
+                tokens.append(ScriptWord(text: word, normalized: WordNormalizer.normalize(word, locale: locale),
+                                         range: NSRange(location: offset + match.location,
+                                                        length: match.length), sentence: sentenceID))
             }
             rendered += sentence
         }
@@ -70,28 +74,35 @@ struct PromptScript: Equatable {
 }
 
 enum WordNormalizer {
-    static let expression = try! NSRegularExpression(pattern: #"[\p{L}\p{N}]+(?:[’'][\p{L}]+)?"#)
-    static let numberFormatter: NumberFormatter = {
-        let formatter = NumberFormatter()
-        formatter.locale = Locale(identifier: "de_DE")
-        formatter.numberStyle = .spellOut
-        return formatter
-    }()
-
-    static func matches(_ text: String) -> [NSTextCheckingResult] {
-        expression.matches(in: text, range: NSRange(location: 0, length: (text as NSString).length))
+    static func matches(_ text: String, locale: Locale = .current) -> [NSRange] {
+        let tokenizer = NLTokenizer(unit: .word)
+        tokenizer.string = text
+        tokenizer.setLanguage(NLLanguage(rawValue: locale.language.languageCode?.identifier ?? "en"))
+        var ranges: [NSRange] = []
+        tokenizer.enumerateTokens(in: text.startIndex..<text.endIndex) { range, _ in
+            if text[range].contains(where: { $0.isLetter || $0.isNumber }) { ranges.append(NSRange(range, in: text)) }
+            return true
+        }
+        return ranges
     }
 
-    static func normalize(_ word: String) -> String {
-        var value = word.lowercased().replacingOccurrences(of: "ß", with: "ss")
-        if let number = Int(value), number >= 0, number < 1_000_000,
-           let spoken = numberFormatter.string(from: NSNumber(value: number)) { value = spoken }
-        return value.folding(options: [.diacriticInsensitive], locale: Locale(identifier: "de_DE"))
-            .filter { $0.isLetter || $0.isNumber }
+    static func normalize(_ word: String, locale: Locale = .current) -> String {
+        var value = word.lowercased(with: locale).replacingOccurrences(of: "ß", with: "ss")
+        if let number = Int(value), number >= 0, number < 1_000_000 {
+            let formatter = NumberFormatter()
+            formatter.locale = locale
+            formatter.numberStyle = .spellOut
+            if let spoken = formatter.string(from: NSNumber(value: number)) { value = spoken }
+        }
+        // Strip optional Latin accents, preserving meaningful marks in other scripts.
+        if value.range(of: #"\p{Latin}"#, options: .regularExpression) != nil {
+            value = value.folding(options: [.diacriticInsensitive], locale: locale)
+        }
+        return value.filter { $0.isLetter || $0.isNumber || $0.unicodeScalars.contains { CharacterSet.nonBaseCharacters.contains($0) } }
     }
 
-    static func tokens(_ text: String) -> [String] {
-        matches(text).map { normalize((text as NSString).substring(with: $0.range)) }.filter { !$0.isEmpty }
+    static func tokens(_ text: String, locale: Locale = .current) -> [String] {
+        matches(text, locale: locale).map { normalize((text as NSString).substring(with: $0), locale: locale) }.filter { !$0.isEmpty }
     }
 
     static func similarity(_ left: String, _ right: String) -> Double {
@@ -145,7 +156,7 @@ struct WordTracker {
 
     @discardableResult
     mutating func consume(_ transcript: String, utterance id: String) -> Int? {
-        let allHeard = WordNormalizer.tokens(transcript)
+        let allHeard = WordNormalizer.tokens(transcript, locale: script.locale)
         guard !allHeard.isEmpty, !script.words.isEmpty else {
             confidence = 0
             return nil
@@ -164,7 +175,10 @@ struct WordTracker {
         let start = max(0, min(cursor - 18, expectedEnd - heard.count - 12))
         let end = min(script.words.count, max(cursor + 72, expectedEnd + 32))
         guard end > start else { return nil }
-        let reference = script.words[start..<end].map(\.normalized)
+        let referenceWords = script.words[start..<end]
+        let reference = referenceWords.map(\.normalized)
+        let numerals = referenceWords.map { $0.text.allSatisfy(\.isNumber) }
+        let english = script.locale.language.languageCode?.identifier == "en"
         let n = heard.count, m = reference.count
         var table = Array(repeating: Array(repeating: Cell(), count: m + 1), count: n + 1)
         for i in 1...n {
@@ -183,20 +197,31 @@ struct WordTracker {
                 choices.append(diagonal)
                 var filler = table[i - 1][j]; filler.score -= 1.2; choices.append(filler)
                 var skipped = table[i][j - 1]; skipped.score -= 1.7; choices.append(skipped)
-                // Recognizers sometimes split German compound words, or join them.
-                if i >= 2, heard[i - 2] + heard[i - 1] == reference[j - 1] {
-                    var merged = table[i - 2][j - 1]
-                    merged.score += 5; merged.matches += 2; merged.exact += 2
-                    if merged.start < 0 { merged.start = j - 1 }
-                    merged.lastHeard = i - 1; merged.lastScript = j - 1
-                    choices.append(merged)
+                // Match bounded joined/split words and multi-word spoken numerals.
+                if i >= 2 {
+                    for length in 2...min(8, i) {
+                        let span = heard[(i - length)..<i]
+                        let joined = span.joined()
+                        let numeral = numerals[j - 1]
+                        let englishNumber = numeral && english && span.filter { $0 != "and" }.joined() == reference[j - 1]
+                        guard joined == reference[j - 1] || englishNumber else { continue }
+                        var merged = table[i - length][j - 1]
+                        merged.score += Double(length) * 3 - 1
+                        merged.matches += length; merged.exact += length
+                        if merged.start < 0 { merged.start = j - 1 }
+                        merged.lastHeard = i - 1; merged.lastScript = j - 1
+                        choices.append(merged)
+                    }
                 }
-                if j >= 2, reference[j - 2] + reference[j - 1] == heard[i - 1] {
-                    var merged = table[i - 1][j - 2]
-                    merged.score += 4; merged.matches += 1; merged.exact += 1
-                    if merged.start < 0 { merged.start = j - 2 }
-                    merged.lastHeard = i - 1; merged.lastScript = j - 1
-                    choices.append(merged)
+                if j >= 2 {
+                    for length in 2...min(8, j) where reference[(j - length)..<j].joined() == heard[i - 1] {
+                        var merged = table[i - 1][j - length]
+                        merged.score += Double(length) + 2
+                        merged.matches += 1; merged.exact += 1
+                        if merged.start < 0 { merged.start = j - length }
+                        merged.lastHeard = i - 1; merged.lastScript = j - 1
+                        choices.append(merged)
+                    }
                 }
                 table[i][j] = choices.max(by: { $0.score < $1.score })!
             }
