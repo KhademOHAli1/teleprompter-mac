@@ -82,14 +82,21 @@ struct ContentView: View {
             UserDefaults.standard.set(value, forKey: "floating")
             model.pinWindow()
         }
-        .alert("Spracherkennung angehalten", isPresented: Binding(
-            get: { model.failure != nil }, set: { if !$0 { model.failure = nil } }
-        )) {
+        .alert("Spracherkennung angehalten", isPresented: failurePresented) {
             Button("OK") { model.failure = nil }
             if model.failure?.contains("Mikrofon") == true {
                 Button("Mikrofon-Einstellungen") { model.microphoneSettings(); model.failure = nil }
             }
         } message: { Text(model.failure ?? "") }
+    }
+
+    private var failurePresented: Binding<Bool> {
+        Binding<Bool>(
+            get: { model.failure != nil },
+            set: { isPresented in
+                if !isPresented { model.failure = nil }
+            }
+        )
     }
 
     private var header: some View {

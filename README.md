@@ -96,7 +96,7 @@ The Swift test runner performs **71 deterministic checks**: 33 for script alignm
 
 The GitHub workflow runs both suites, builds an ad-hoc signed app, and checks source hygiene without microphone access or API credentials.
 
-See [Validation](docs/VALIDATION.md) for the evidence and limits. Hosted CI is configured but has not yet run for this source release. Recognition latency, accuracy and long-session behavior must be measured with representative voices and microphones.
+See [Validation](docs/VALIDATION.md) for the evidence and limits, and [GitHub Actions](https://github.com/KhademOHAli1/teleprompter-mac/actions/workflows/ci.yml) for hosted macOS 26 checks. Recognition latency, accuracy and long-session behavior must be measured with representative voices and microphones.
 
 CLI diagnostics, kept separate from normal app use:
 

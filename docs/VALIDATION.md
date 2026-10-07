@@ -21,7 +21,15 @@ The source ZIP was extracted into a fresh directory with spaces in its path. All
 
 The archive's 41 selected text files were checked for integrity, executable script modes and absence of generated/private directories. A separate bundle identifier was used to launch the freshly built app: its editor started empty with the local provider selected. Loading the neutral built-in demo and opening the reading view visibly showed centered text and the inactive voice meter. No microphone or OpenAI session was started during this UI smoke check.
 
-Workflow YAML parsed successfully; read-only permissions and the selected macOS runner were checked. These local checks do not confirm hosted GitHub execution.
+Workflow YAML parsed successfully; read-only permissions and the selected macOS runner were checked.
+
+## Hosted GitHub checks
+
+[GitHub Actions](https://github.com/KhademOHAli1/teleprompter-mac/actions/workflows/ci.yml)
+runs the offline suites, source hygiene checks, app build with ad-hoc signature
+verification and source packaging on macOS 26. The workflow page reports each
+commit's result. The SwiftUI alert uses an explicitly typed binding to reduce
+type inference work on the hosted compiler.
 
 ## Recognition evidence and limits
 
@@ -29,4 +37,4 @@ Earlier local versions were observed recognizing a neutral German audio file, in
 
 Those observations do not establish a word error rate, fixed latency, dialect coverage, comparative provider accuracy, or long-session reliability for this release. Online configuration regression checks do not authenticate a live OpenAI account.
 
-Hosted GitHub CI is prepared but has not run for this source project. A fresh-Mac compatibility matrix, signed/notarized binary release and extended microphone acceptance run remain separate release work.
+A fresh-Mac compatibility matrix, signed/notarized binary release and extended microphone acceptance run remain separate release work.
