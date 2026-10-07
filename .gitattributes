@@ -1,0 +1,7 @@
+* text=auto eol=lf
+*.swift text
+*.sh text
+*.command text
+*.md text
+*.yml text
+*.plist text

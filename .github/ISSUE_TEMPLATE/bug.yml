@@ -1,0 +1,36 @@
+name: Bug report
+description: Report a reproducible problem using a neutral script
+body:
+  - type: markdown
+    attributes:
+      value: "Do not include API keys, private transcripts or personal audio. See SECURITY.md for sensitive issues."
+  - type: input
+    id: environment
+    attributes:
+      label: Environment
+      description: App version, macOS version, Xcode version and Mac model
+    validations:
+      required: true
+  - type: dropdown
+    id: provider
+    attributes:
+      label: Speech provider
+      options:
+        - Local
+        - OpenAI
+        - Neither / build problem
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Reproduction
+      description: Steps and a short neutral example script
+    validations:
+      required: true
+  - type: textarea
+    id: behavior
+    attributes:
+      label: Expected and observed behavior
+    validations:
+      required: true

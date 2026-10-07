@@ -1,0 +1,39 @@
+name: macOS checks
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: checks-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test-and-build:
+    runs-on: macos-26
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          persist-credentials: false
+      - name: Toolchain
+        run: |
+          xcodebuild -version
+          xcrun swiftc --version
+          xcrun --sdk macosx --show-sdk-version
+      - name: Source hygiene
+        run: python3 scripts/check-source.py
+      - name: Source packaging regression checks
+        run: python3 -m unittest discover -s Tests -p '*Tests.py'
+      - name: Offline regression checks
+        run: ./test.command
+      - name: Build and verify ad-hoc signature
+        run: ./build.command
+      - name: Create source-only archive
+        run: python3 scripts/archive-source.py
