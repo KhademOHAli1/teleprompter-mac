@@ -50,6 +50,21 @@ struct ContentView: View {
     @ObservedObject var model: PrompterModel
 
     var body: some View {
+        providerPreferences
+            .onChange(of: model.mirrored) { _, value in UserDefaults.standard.set(value, forKey: "mirrored") }
+            .onChange(of: model.floating) { _, value in
+                UserDefaults.standard.set(value, forKey: "floating")
+                model.pinWindow()
+            }
+            .alert("Spracherkennung angehalten", isPresented: failurePresented) {
+                Button("OK") { model.failure = nil }
+                if model.failure?.contains("Mikrofon") == true {
+                    Button("Mikrofon-Einstellungen") { model.microphoneSettings(); model.failure = nil }
+                }
+            } message: { Text(model.failure ?? "") }
+    }
+
+    private var content: some View {
         VStack(spacing: 0) {
             header
             Divider().overlay(Color.white.opacity(0.05))
@@ -59,35 +74,38 @@ struct ContentView: View {
         }
         .background(canvas)
         .tint(mint)
-        .sheet(isPresented: $model.showSettings) {
-            VStack(alignment: .leading, spacing: 22) {
-                HStack {
-                    Text("Leseansicht").font(.title2.bold())
-                    Spacer()
-                    Button("Fertig") { model.showSettings = false }.keyboardShortcut(.defaultAction)
-                }
-                controls
+    }
+
+    private var settingsSheets: some View {
+        content
+            .sheet(isPresented: $model.showSettings) { readingSettingsSheet }
+            .sheet(isPresented: $model.showOpenAI) { openAISettings }
+    }
+
+    private var readingSettingsSheet: some View {
+        VStack(alignment: .leading, spacing: 22) {
+            HStack {
+                Text("Leseansicht").font(.title2.bold())
+                Spacer()
+                Button("Fertig") { model.showSettings = false }.keyboardShortcut(.defaultAction)
             }
-            .padding(28).frame(width: 410)
+            controls
         }
-        .sheet(isPresented: $model.showOpenAI) { openAISettings }
-        .onChange(of: model.draft) { _, _ in model.saveDraft() }
-        .onChange(of: model.fontSize) { _, value in UserDefaults.standard.set(value, forKey: "fontSize") }
-        .onChange(of: model.columnWidth) { _, value in UserDefaults.standard.set(value, forKey: "columnWidth") }
-        .onChange(of: model.lookAhead) { _, value in UserDefaults.standard.set(value, forKey: "lookAhead") }
-        .onChange(of: model.delay) { _, value in UserDefaults.standard.set(value, forKey: "delay") }
-        .onChange(of: model.provider) { _, value in UserDefaults.standard.set(value, forKey: "provider") }
-        .onChange(of: model.mirrored) { _, value in UserDefaults.standard.set(value, forKey: "mirrored") }
-        .onChange(of: model.floating) { _, value in
-            UserDefaults.standard.set(value, forKey: "floating")
-            model.pinWindow()
-        }
-        .alert("Spracherkennung angehalten", isPresented: failurePresented) {
-            Button("OK") { model.failure = nil }
-            if model.failure?.contains("Mikrofon") == true {
-                Button("Mikrofon-Einstellungen") { model.microphoneSettings(); model.failure = nil }
-            }
-        } message: { Text(model.failure ?? "") }
+        .padding(28).frame(width: 410)
+    }
+
+    private var readingPreferences: some View {
+        settingsSheets
+            .onChange(of: model.draft) { _, _ in model.saveDraft() }
+            .onChange(of: model.fontSize) { _, value in UserDefaults.standard.set(value, forKey: "fontSize") }
+            .onChange(of: model.columnWidth) { _, value in UserDefaults.standard.set(value, forKey: "columnWidth") }
+            .onChange(of: model.lookAhead) { _, value in UserDefaults.standard.set(value, forKey: "lookAhead") }
+    }
+
+    private var providerPreferences: some View {
+        readingPreferences
+            .onChange(of: model.delay) { _, value in UserDefaults.standard.set(value, forKey: "delay") }
+            .onChange(of: model.provider) { _, value in UserDefaults.standard.set(value, forKey: "provider") }
     }
 
     private var failurePresented: Binding<Bool> {

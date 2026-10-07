@@ -28,7 +28,8 @@ Workflow YAML parsed successfully; read-only permissions and the selected macOS 
 [GitHub Actions](https://github.com/KhademOHAli1/teleprompter-mac/actions/workflows/ci.yml)
 runs the offline suites, source hygiene checks, app build with ad-hoc signature
 verification and source packaging on macOS 26. The workflow page reports each
-commit's result. The SwiftUI alert uses an explicitly typed binding to reduce
+commit's result. The SwiftUI layout, sheets, preference handlers and alert use
+separate view expressions and an explicitly typed alert binding to reduce
 type inference work on the hosted compiler.
 
 ## Recognition evidence and limits
